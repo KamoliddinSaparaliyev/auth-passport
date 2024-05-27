@@ -17,12 +17,7 @@ exports.catchErrors =
      * @returns {Promise<import("express").Response>} - The response object
      */
     (req, res, next) =>
-        fn(req, res, next).catch(
-            /**
-             * @param {Error} err
-             */
-            (err) => next(err)
-        );
+        fn(req, res, next).catch((err) => next(err));
 
 /**
  * Not Found Error Handler
@@ -51,11 +46,22 @@ exports.developmentErrors = (error, req, res, next) => {
         status: error.status,
         stackHighlighted: error.stack.replace(/[a-z_-\d]+.js:\d+:\d+/gi, '<mark>$&</mark>'),
     };
+    console.log(errorDetails);
 
     if (error.name === 'CastError') {
         return res.status(400).json({
             success: false,
             message: `Invalid ${error.path}: ${error.value}`,
+        });
+    }
+
+    if (error.name === 'ValidationError') {
+        const errors = Object.values(error.errors)
+            .map((el) => el.message)
+            .join('. ');
+        return res.status(400).json({
+            success: false,
+            message: errors,
         });
     }
 

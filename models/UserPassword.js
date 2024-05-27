@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
 const userPasswordSchema = new mongoose.Schema(

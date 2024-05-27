@@ -1,50 +1,56 @@
-const User = require('../models/User');
 const UserPassword = require('../models/UserPassword');
+const User = require('../models/User');
+const passport = require('passport');
 
 class AuthController {
     async login(req, res, next) {
-        try {
-            const { email, password } = req.body;
+        passport.authenticate('local', (err, user, info) => {
+            if (err) {
+                return next(err);
+            }
 
-            const user = await User.findOne({ email });
             if (!user) {
-                return res.status(404).send({ error: 'User not found' });
+                return res.status(401).json({ error: info.message });
             }
 
-            const userPassword = await UserPassword.findOne({ user });
+            req.logIn(user, (err) => {
+                if (err) {
+                    return next(err);
+                }
 
-            if (!userPassword || !userPassword.validatePassword(password)) {
-                return res.status(401).send({ error: 'Invalid credentials' });
-            }
-
-            res.status(200).json({ success: true, result: user });
-        } catch (err) {
-            next(err);
-        }
+                return res.status(200).json({ success: true, message: 'User logged in' });
+            });
+        })(req, res, next);
     }
 
-    async register(req, res, next) {
+    async register(req, res) {
         const { email, password, username } = req.body;
 
-        // const existingUser = await User.findOne({ email });
-        // console.log(existingUser);
-        // if (existingUser) {
-        //     return res.status(400).send({ error: 'User already exists' });
-        // }
+        if (!email || !password) {
+            return res.status(400).send({ error: 'Missing required fields' });
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).send({ error: 'User already exists' });
+        }
 
         const user = new User({ email, username });
-
         const userPassword = new UserPassword({ user, password });
 
-        // if (!userPassword) {
-        //     await user.remove();
-        //     return res.status(500).send({ error: 'Failed to create user' });
-        // }
+        if (!userPassword) {
+            await user.remove();
+            return res.status(500).send({ error: 'Failed to create user' });
+        }
 
         await user.save();
         await userPassword.save();
 
-        res.status(201).json({ success: true, id: user });
+        res.status(201).json({ success: true, message: 'User created' });
+    }
+
+    async me(req, res) {
+        res.status(200).json({ user: req.user });
     }
 }
 

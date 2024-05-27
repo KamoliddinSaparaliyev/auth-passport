@@ -13,7 +13,8 @@ const callback = async (email, password, done) => {
         }
 
         const userPassword = await UserPassword.findOne({ user: user._id });
-        if (!userPassword && !userPassword.validatePassword(password)) {
+        console.log(userPassword);
+        if (!userPassword || !userPassword.validatePassword(password)) {
             return done(null, false, { message: 'Incorrect email or password.' });
         }
 
@@ -24,7 +25,7 @@ const callback = async (email, password, done) => {
 };
 
 // Local strategy setup
-const strategy = new LocalStrategy({ usernameField: 'email' }, callback);
+const strategy = new LocalStrategy({ usernameField: 'email', passwordField: 'password' }, callback);
 
 passport.use(strategy);
 
