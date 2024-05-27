@@ -1,10 +1,11 @@
 const UserPassword = require('../models/UserPassword');
 const User = require('../models/User');
 const passport = require('passport');
+const issueJWT = require('../utils');
 
 class AuthController {
     async login(req, res, next) {
-        passport.authenticate('local', (err, user, info) => {
+        passport.authenticate('jwt', (err, user, info) => {
             if (err) {
                 return next(err);
             }
@@ -46,7 +47,10 @@ class AuthController {
         await user.save();
         await userPassword.save();
 
-        res.status(201).json({ success: true, message: 'User created' });
+        const token = issueJWT(user);
+
+        res.cookie('jwt', token.token, { httpOnly: true, secure: true, sameSite: 'none' });
+        res.status(201).json({ success: true, message: 'User created', ...token, user });
     }
 
     async me(req, res) {

@@ -1,47 +1,32 @@
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+const fs = require('fs');
+const path = require('path');
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
 
 const User = require('../models/User');
-const UserPassword = require('../models/UserPassword');
 
-// Callback function for local strategy
-const callback = async (email, password, done) => {
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return done(null, false, { message: 'Incorrect email or password.' });
-        }
+const pathToKey = path.join(__dirname, 'id_rsa_pub.pem');
+const PUB_KEY = fs.readFileSync(pathToKey, 'utf8');
 
-        const userPassword = await UserPassword.findOne({ user: user._id });
-        console.log(userPassword);
-        if (!userPassword || !userPassword.validatePassword(password)) {
-            return done(null, false, { message: 'Incorrect email or password.' });
-        }
-
-        return done(null, user);
-    } catch (err) {
-        return done(err);
-    }
+// Options for jwt strategy
+const options = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: PUB_KEY,
+    algorithms: ['RS256'],
 };
 
-// Local strategy setup
-const strategy = new LocalStrategy({ usernameField: 'email', passwordField: 'password' }, callback);
-
-passport.use(strategy);
-
-// Serialize user
-passport.serializeUser((user, done) => {
-    done(null, user.id);
-});
-
-// Deserialize user
-passport.deserializeUser(async (id, done) => {
-    try {
-        const user = await User.findById(id);
-        done(null, user);
-    } catch (err) {
-        done(err);
-    }
-});
-
-module.exports = passport;
+module.exports = (passport) => {
+    passport.use(
+        new JwtStrategy(options, async (payload, done) => {
+            try {
+                const user = await User.aggregate([{ $match: { _id: payload.sub } }]);
+                if (!user) {
+                    return done(null, false);
+                }
+                done(null, user);
+            } catch (error) {
+                done(error, false);
+            }
+        })
+    );
+};

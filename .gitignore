@@ -1,3 +1,4 @@
 node_modules
 .env
 *.log
+id_rsa_pri.pem

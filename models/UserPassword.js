@@ -1,3 +1,4 @@
+const { compare } = require('bcryptjs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 
@@ -13,6 +14,7 @@ const userPasswordSchema = new mongoose.Schema(
     }
 );
 
+compare;
 userPasswordSchema.pre('save', async function (next) {
     if (!this.isModified('password')) next();
 
